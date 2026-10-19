@@ -1,0 +1,44 @@
+# Publica CONTADOR SERIES LORENZITO en Firebase (neat-motif-237214.web.app)
+# cada vez que cambia el código de codigo-fuente/. Igual que hacía scripts/deploy_web.ps1.
+name: Publicar en Firebase
+
+on:
+  push:
+    branches: [main]
+    paths: ['codigo-fuente/**']
+  workflow_dispatch:
+
+jobs:
+  publicar:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: codigo-fuente
+    steps:
+      - name: Comprobar llave de Firebase
+        id: llave
+        working-directory: .
+        env:
+          LLAVE: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          if [ -z "$LLAVE" ]; then echo "Falta la llave FIREBASE_SERVICE_ACCOUNT: no se publica."; echo "ok=no" >> $GITHUB_OUTPUT; else echo "ok=si" >> $GITHUB_OUTPUT; fi
+      - uses: actions/checkout@v4
+        if: steps.llave.outputs.ok == 'si'
+      - uses: subosito/flutter-action@v2
+        if: steps.llave.outputs.ok == 'si'
+        with:
+          channel: stable
+          cache: true
+      - name: Compilar web (número de versión automático)
+        if: steps.llave.outputs.ok == 'si'
+        run: |
+          flutter pub get
+          flutter build web --release --build-number=$((42 + ${{ github.run_number }}))
+      - uses: FirebaseExtended/action-hosting-deploy@v0
+        if: steps.llave.outputs.ok == 'si'
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          projectId: neat-motif-237214
+          channelId: live
+          entryPoint: codigo-fuente
