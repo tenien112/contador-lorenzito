@@ -1,34 +1,36 @@
 {
-    "name": "CONTADOR-LORENZITO-1",
-    "short_name": "CONTADOR-LORENZITO-1",
+    "name": "CONTADOR-SERIES-LORENZITO-GIMNASIO",
+    "short_name": "CONTADOR-SERIES",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "Contador de series de gimnasio by Lorenzo",
+    "description": "A new Flutter project.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
         {
-            "src": "icons/Icon-192.png",
+            "src": "icons/Icon-192.jpg",
             "sizes": "192x192",
-            "type": "image/png"
+            "type": "image/jpeg",
+            "purpose": "any"
         },
         {
-            "src": "icons/Icon-512.png",
+            "src": "icons/Icon-512.jpg",
             "sizes": "512x512",
-            "type": "image/png"
+            "type": "image/jpeg",
+            "purpose": "any"
         },
         {
-            "src": "icons/Icon-maskable-192.png",
+            "src": "icons/Icon-maskable-192.jpg",
             "sizes": "192x192",
-            "type": "image/png",
+            "type": "image/jpeg",
             "purpose": "maskable"
         },
         {
-            "src": "icons/Icon-maskable-512.png",
+            "src": "icons/Icon-maskable-512.jpg",
             "sizes": "512x512",
-            "type": "image/png",
+            "type": "image/jpeg",
             "purpose": "maskable"
         }
     ]

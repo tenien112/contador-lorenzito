@@ -1,0 +1,29 @@
+{
+    "project_info": {
+        "project_number": "812410256814",
+        "project_id": "neat-motif-237214",
+        "storage_bucket": "neat-motif-237214.firebasestorage.app"
+    },
+    "client": [
+        {
+            "client_info": {
+                "mobilesdk_app_id": "1:812410256814:android:33e68d414053720d5fdc3f",
+                "android_client_info": {
+                    "package_name": "com.lorenzito.contador_series"
+                }
+            },
+            "oauth_client": [],
+            "api_key": [
+                {
+                    "current_key": "AIzaSyCfnEfMob_ZPujKeoVw7pSQHGEdjKYgT0w"
+                }
+            ],
+            "services": {
+                "appinvite_service": {
+                    "other_platform_oauth_client": []
+                }
+            }
+        }
+    ],
+    "configuration_version": "1"
+}

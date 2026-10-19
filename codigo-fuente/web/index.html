@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html>
+
 <head>
   <!--
     If you are serving your web app in a path other than the root, change the
@@ -18,21 +19,151 @@
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="Contador de series de gimnasio by Lorenzo">
+  <meta name="description" content="A new Flutter project.">
 
   <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <meta name="apple-mobile-web-app-title" content="CONTADOR-LORENZITO-1">
-  <link rel="apple-touch-icon" href="icons/Icon-192.png">
+   <meta name="apple-mobile-web-app-title" content="CONTADOR-SERIES">
+  <link rel="apple-touch-icon" href="icons/Icon-192.jpg">
 
   <!-- Favicon -->
-  <link rel="icon" type="image/png" href="favicon.png"/>
+  <link rel="icon" type="image/jpeg" href="favicon.jpg" />
 
-  <title>CONTADOR-LORENZITO-1</title>
+  <title>CONTADOR-SERIES-LORENZITO-GIMNASIO</title>
   <link rel="manifest" href="manifest.json">
 </head>
+
 <body>
+  <style>
+    #update-banner {
+      position: fixed;
+      bottom: 25px;
+      left: 50%;
+      transform: translateX(-50%);
+      background-color: #323232;
+      color: white;
+      padding: 8px 16px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+      display: none;
+      z-index: 9999;
+      font-family: Arial, sans-serif;
+      align-items: center;
+      gap: 15px;
+    }
+
+    #update-banner button {
+      background-color: #2196F3;
+      color: white;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+  </style>
+  <div id="update-banner">
+    <span>Nueva versión disponible</span>
+    <button onclick="updateApp()">Actualizar</button>
+  </div>
+  <script>
+    let newWorker;
+    let refreshing = false;
+
+    async function updateApp() {
+      if (refreshing) return;
+      refreshing = true;
+
+      try {
+        const cacheNames = await caches.keys();
+        await Promise.all(cacheNames.map((name) => caches.delete(name)));
+      } catch (err) {
+        console.warn('No se pudieron limpiar las cachés:', err);
+      }
+
+      if (newWorker) {
+        newWorker.postMessage({ type: 'SKIP_WAITING' });
+      } else if ('serviceWorker' in navigator) {
+        const reg = await navigator.serviceWorker.getRegistration();
+        if (reg && reg.waiting) {
+          reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+        }
+      }
+
+      const url = new URL(window.location.href);
+      url.searchParams.set('v', Date.now().toString());
+      window.location.replace(url.toString());
+    }
+
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (refreshing) return;
+        refreshing = true;
+        window.location.reload();
+      });
+    }
+
+    window.addEventListener('load', function () {
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistration().then(function (reg) {
+          if (reg) {
+            if (reg.waiting && navigator.serviceWorker.controller) {
+              newWorker = reg.waiting;
+              document.getElementById('update-banner').style.display = 'flex';
+              setTimeout(updateApp, 1500);
+            }
+
+            reg.onupdatefound = function () {
+              const installingWorker = reg.installing;
+              if (!installingWorker) return;
+
+              installingWorker.onstatechange = function () {
+                if (installingWorker.state === 'installed') {
+                  if (navigator.serviceWorker.controller) {
+                    newWorker = installingWorker;
+                    console.log('Nueva versión detectada. Actualizando...');
+                    document.getElementById('update-banner').style.display = 'flex';
+                    setTimeout(updateApp, 1500);
+                  }
+                }
+              };
+            };
+          }
+        });
+      }
+    });
+  </script>
   <script src="flutter_bootstrap.js" async></script>
+
+  <!-- Screen Wake Lock: previene que la pantalla se apague mientras la app está activa -->
+  <script>
+    let wakeLock = null;
+
+    async function requestWakeLock() {
+      if ('wakeLock' in navigator) {
+        try {
+          wakeLock = await navigator.wakeLock.request('screen');
+          console.log('Wake Lock activado ✅');
+          wakeLock.addEventListener('release', () => {
+            console.log('Wake Lock liberado');
+          });
+        } catch (err) {
+          console.warn('Wake Lock no disponible:', err);
+        }
+      }
+    }
+
+    // Reactivar el wake lock cuando la app vuelve al primer plano
+    document.addEventListener('visibilitychange', async () => {
+      if (document.visibilityState === 'visible') {
+        await requestWakeLock();
+      }
+    });
+
+    // Activar en cuanto carga la página
+    window.addEventListener('load', requestWakeLock);
+  </script>
 </body>
+
 </html>
