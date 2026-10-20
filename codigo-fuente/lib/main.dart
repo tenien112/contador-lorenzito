@@ -1797,13 +1797,13 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
             padding: const EdgeInsets.symmetric(horizontal: 6),
             child: InkWell(
               onTap: _mostrarSelectorColor,
-              borderRadius: BorderRadius.circular(6),
+              customBorder: const CircleBorder(),
               child: Container(
-                width: 26,
-                height: 26,
+                width: 22,
+                height: 22,
                 decoration: BoxDecoration(
                   color: colorApp.value,
-                  borderRadius: BorderRadius.circular(6),
+                  shape: BoxShape.circle,
                   border: Border.all(color: Colors.white, width: 2),
                 ),
               ),
