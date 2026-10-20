@@ -20,6 +20,39 @@ import 'services/firebase_service.dart';
 import 'ad_helper.dart';
 import 'firebase_options.dart';
 
+// Color de la aplicación (el azul original siempre es el primero y el de por defecto)
+const List<MaterialColor> coloresApp = [
+  Colors.blue,
+  Colors.indigo,
+  Colors.deepPurple,
+  Colors.purple,
+  Colors.pink,
+  Colors.red,
+  Colors.deepOrange,
+  Colors.orange,
+  Colors.brown,
+  Colors.green,
+  Colors.teal,
+  Colors.cyan,
+  Colors.blueGrey,
+];
+final ValueNotifier<MaterialColor> colorApp = ValueNotifier(Colors.blue);
+
+Future<void> cargarColorApp() async {
+  try {
+    final prefs = await SharedPreferences.getInstance();
+    final i = prefs.getInt('color_app') ?? 0;
+    colorApp.value =
+        (i >= 0 && i < coloresApp.length) ? coloresApp[i] : Colors.blue;
+  } catch (_) {}
+}
+
+Future<void> guardarColorApp(int i) async {
+  colorApp.value = coloresApp[i];
+  final prefs = await SharedPreferences.getInstance();
+  await prefs.setInt('color_app', i);
+}
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   tz.initializeTimeZones();
@@ -43,6 +76,7 @@ void main() async {
     print("DEBUG: Date Init Error: $e");
   }
 
+  await cargarColorApp();
   print("DEBUG: Running App");
   runApp(const MyApp());
 }
@@ -52,18 +86,21 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
+    return ValueListenableBuilder<MaterialColor>(
+      valueListenable: colorApp,
+      builder: (context, color, _) => MaterialApp(
       title: 'CONTADOR-SERIES-LORENZITO-GIMNASIO',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.blue,
+          seedColor: color,
           brightness: Brightness.light,
         ),
         scaffoldBackgroundColor: Colors.white,
         useMaterial3: true,
       ),
       home: const MyHomePage(title: 'CONTADOR-SERIES-LORENZITO-GIMNASIO'),
+      ),
     );
   }
 }
@@ -134,6 +171,7 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    colorApp.addListener(_alCambiarColor);
     WakelockPlus.enable(); // <-- Prevenir que la pantalla se apague
     _loadSessions();
     _loadExerciseTypes();
@@ -207,6 +245,7 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
 
   @override
   void dispose() {
+    colorApp.removeListener(_alCambiarColor);
     WidgetsBinding.instance.removeObserver(this);
     _timer?.cancel();
     _bannerAd?.dispose();
@@ -222,6 +261,69 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
         _currentTime = DateTime.now();
       });
     }
+  }
+
+  void _alCambiarColor() {
+    if (mounted) setState(() {});
+  }
+
+  void _mostrarSelectorColor() {
+    showModalBottomSheet(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Color de la aplicación',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 16),
+              Wrap(
+                spacing: 14,
+                runSpacing: 14,
+                alignment: WrapAlignment.center,
+                children: List.generate(coloresApp.length, (i) {
+                  final c = coloresApp[i];
+                  final elegido = c == colorApp.value;
+                  return GestureDetector(
+                    onTap: () {
+                      guardarColorApp(i);
+                      Navigator.pop(ctx);
+                    },
+                    child: Container(
+                      width: 46,
+                      height: 46,
+                      decoration: BoxDecoration(
+                        color: c,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: elegido ? Colors.black87 : Colors.transparent,
+                          width: 3,
+                        ),
+                      ),
+                      child: elegido
+                          ? const Icon(Icons.check, color: Colors.white)
+                          : null,
+                    ),
+                  );
+                }),
+              ),
+              const SizedBox(height: 12),
+              TextButton(
+                onPressed: () {
+                  guardarColorApp(0);
+                  Navigator.pop(ctx);
+                },
+                child: const Text('Volver al azul original'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   Future<void> _loadSessions() async {
@@ -1360,7 +1462,7 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
                         return ListTile(
                           leading: CircleAvatar(
                             backgroundColor:
-                                isCurrent ? Colors.orange : Colors.blue,
+                                isCurrent ? Colors.orange : colorApp.value,
                             foregroundColor: Colors.white,
                             child: Text('${index + 1}'),
                           ),
@@ -1691,6 +1793,22 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         title: Text(widget.title),
         actions: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 6),
+            child: InkWell(
+              onTap: _mostrarSelectorColor,
+              borderRadius: BorderRadius.circular(6),
+              child: Container(
+                width: 26,
+                height: 26,
+                decoration: BoxDecoration(
+                  color: colorApp.value,
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(color: Colors.white, width: 2),
+                ),
+              ),
+            ),
+          ),
           if (_isSyncing)
             const Padding(
               padding: EdgeInsets.symmetric(horizontal: 16),
@@ -1760,7 +1878,7 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
                     icon: const Icon(Icons.fitness_center, size: 18),
                     label: Text('Ejercicio: $_selectedExerciseType'),
                     style: FilledButton.styleFrom(
-                      backgroundColor: Colors.blue,
+                      backgroundColor: colorApp.value,
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 12),
                     ),
@@ -1776,14 +1894,14 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
                             vertical: 2,
                           ),
                           decoration: BoxDecoration(
-                            color: Colors.blue.withOpacity(0.1),
+                            color: colorApp.value.withOpacity(0.1),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
                             'Inicio: ${DateFormat('dd/MM/yyyy HH:mm:ss').format(_startTime!)}',
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 12,
-                              color: Colors.blue,
+                              color: colorApp.value,
                             ),
                           ),
                         )
@@ -1800,7 +1918,7 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
                     const SizedBox(width: 8),
                     IconButton(
                       icon: const Icon(Icons.list_alt, size: 24),
-                      color: Colors.blue,
+                      color: colorApp.value,
                       onPressed: _showSeriesDetails,
                       tooltip: 'Ver detalles de series',
                       constraints: const BoxConstraints(),
@@ -1855,10 +1973,10 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
                                   children: [
                                     Text(
                                       'MIN $_minBpm',
-                                      style: const TextStyle(
+                                      style: TextStyle(
                                         fontSize: 11,
                                         fontWeight: FontWeight.bold,
-                                        color: Colors.blue,
+                                        color: colorApp.value,
                                       ),
                                     ),
                                     const SizedBox(width: 4),
@@ -1883,7 +2001,7 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
                                       style: TextStyle(
                                         fontSize: 9,
                                         fontWeight: FontWeight.bold,
-                                        color: Colors.blue.shade300,
+                                        color: colorApp.value.shade300,
                                       ),
                                     ),
                                     const SizedBox(width: 4),
@@ -1943,10 +2061,10 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
                                 ),
                                 Text(
                                   '${_currentSessionSeriesReps.fold(0, (sum, item) => sum + (item as int))}',
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 20,
                                     fontWeight: FontWeight.bold,
-                                    color: Colors.blue,
+                                    color: colorApp.value,
                                   ),
                                 ),
                                 const Text(
@@ -2018,18 +2136,18 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
                       const EdgeInsets.symmetric(vertical: 0, horizontal: 10),
                   margin: const EdgeInsets.symmetric(horizontal: 20),
                   decoration: BoxDecoration(
-                    color: Colors.blue.withOpacity(0.03),
+                    color: colorApp.value.withOpacity(0.03),
                     borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: Colors.blue.withOpacity(0.1)),
+                    border: Border.all(color: colorApp.value.withOpacity(0.1)),
                   ),
                   child: Column(
                     children: [
-                      const Text(
+                      Text(
                         'REPETICIONES DE LA SERIE',
                         style: TextStyle(
                           fontSize: 10,
                           fontWeight: FontWeight.bold,
-                          color: Colors.blue,
+                          color: colorApp.value,
                         ),
                       ),
                       const SizedBox(height: 1),
@@ -2042,18 +2160,18 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
                                 if (_upcomingReps > 0) _upcomingReps--;
                               });
                             },
-                            icon: const Icon(Icons.remove_circle_outline,
-                                size: 18, color: Colors.blue),
+                            icon: Icon(Icons.remove_circle_outline,
+                                size: 18, color: colorApp.value),
                             padding: EdgeInsets.zero,
                             constraints: const BoxConstraints(),
                           ),
                           const SizedBox(width: 10),
                           Text(
                             '$_upcomingReps',
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 20,
                               fontWeight: FontWeight.bold,
-                              color: Colors.blue,
+                              color: colorApp.value,
                             ),
                           ),
                           const SizedBox(width: 10),
@@ -2063,8 +2181,8 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
                                 _upcomingReps++;
                               });
                             },
-                            icon: const Icon(Icons.add_circle_outline,
-                                size: 18, color: Colors.blue),
+                            icon: Icon(Icons.add_circle_outline,
+                                size: 18, color: colorApp.value),
                             padding: EdgeInsets.zero,
                             constraints: const BoxConstraints(),
                           ),
@@ -2167,7 +2285,7 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
     return ElevatedButton(
       onPressed: onPressed,
       style: ElevatedButton.styleFrom(
-        backgroundColor: Colors.blue,
+        backgroundColor: colorApp.value,
         foregroundColor: Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
