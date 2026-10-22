@@ -37,6 +37,20 @@ const List<MaterialColor> coloresApp = [
   Colors.blueGrey,
 ];
 final ValueNotifier<MaterialColor> colorApp = ValueNotifier(Colors.blue);
+final ValueNotifier<bool> modoOscuro = ValueNotifier(false);
+
+Future<void> cargarModoOscuro() async {
+  try {
+    final prefs = await SharedPreferences.getInstance();
+    modoOscuro.value = prefs.getBool('modo_oscuro') ?? false;
+  } catch (_) {}
+}
+
+Future<void> cambiarModoOscuro() async {
+  modoOscuro.value = !modoOscuro.value;
+  final prefs = await SharedPreferences.getInstance();
+  await prefs.setBool('modo_oscuro', modoOscuro.value);
+}
 
 Future<void> cargarColorApp() async {
   try {
@@ -77,6 +91,7 @@ void main() async {
   }
 
   await cargarColorApp();
+  await cargarModoOscuro();
   print("DEBUG: Running App");
   runApp(const MyApp());
 }
@@ -86,11 +101,14 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ValueListenableBuilder<MaterialColor>(
+    return ValueListenableBuilder<bool>(
+      valueListenable: modoOscuro,
+      builder: (context, oscuro, _) => ValueListenableBuilder<MaterialColor>(
       valueListenable: colorApp,
       builder: (context, color, _) => MaterialApp(
       title: 'CONTADOR-SERIES-LORENZITO-GIMNASIO',
       debugShowCheckedModeBanner: false,
+      themeMode: oscuro ? ThemeMode.dark : ThemeMode.light,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
           seedColor: color,
@@ -99,7 +117,16 @@ class MyApp extends StatelessWidget {
         scaffoldBackgroundColor: Colors.white,
         useMaterial3: true,
       ),
+      darkTheme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: color,
+          brightness: Brightness.dark,
+        ),
+        scaffoldBackgroundColor: const Color(0xFF121417),
+        useMaterial3: true,
+      ),
       home: const MyHomePage(title: 'CONTADOR-SERIES-LORENZITO-GIMNASIO'),
+      ),
       ),
     );
   }
@@ -300,7 +327,7 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
                         color: c,
                         borderRadius: BorderRadius.circular(10),
                         border: Border.all(
-                          color: elegido ? Colors.black87 : Colors.transparent,
+                          color: elegido ? Theme.of(ctx).colorScheme.onSurface : Colors.transparent,
                           width: 3,
                         ),
                       ),
@@ -497,7 +524,7 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
                         padding: const EdgeInsets.only(right: 4.0),
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(8),
-                          color: Colors.grey.shade50,
+                          color: Theme.of(context).colorScheme.surfaceContainerLow,
                         ),
                         child: Row(
                           children: [
@@ -1474,7 +1501,7 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
                                   ? FontWeight.bold
                                   : FontWeight.normal,
                               color:
-                                  isCurrent ? Colors.orange[900] : Colors.black,
+                                  isCurrent ? Colors.orange[900] : Theme.of(context).colorScheme.onSurface,
                             ),
                           ),
                           subtitle: Column(
@@ -1793,6 +1820,30 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         title: Text(widget.title),
         actions: [
+          ValueListenableBuilder<bool>(
+            valueListenable: modoOscuro,
+            builder: (context, oscuro, _) => Tooltip(
+              message: oscuro ? 'Modo de día' : 'Modo oscuro',
+              child: InkWell(
+                onTap: cambiarModoOscuro,
+                borderRadius: BorderRadius.circular(5),
+                child: Container(
+                  width: 22,
+                  height: 22,
+                  decoration: BoxDecoration(
+                    color: Colors.black26,
+                    borderRadius: BorderRadius.circular(5),
+                    border: Border.all(color: Colors.white, width: 2),
+                  ),
+                  child: Icon(
+                    oscuro ? Icons.light_mode : Icons.dark_mode,
+                    size: 13,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ),
+          ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 6),
             child: InkWell(
