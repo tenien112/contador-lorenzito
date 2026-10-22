@@ -38,11 +38,16 @@ jobs:
         if: steps.llave.outputs.ok == 'si'
         with:
           node-version: 20
-      - uses: FirebaseExtended/action-hosting-deploy@v0
+      - name: Publicar en Firebase Hosting
         if: steps.llave.outputs.ok == 'si'
-        with:
-          repoToken: ${{ secrets.GITHUB_TOKEN }}
-          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
-          projectId: neat-motif-237214
-          channelId: live
-          entryPoint: codigo-fuente
+        env:
+          LLAVE: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          printf '%s' "$LLAVE" > "$RUNNER_TEMP/llave.json"
+          export GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/llave.json"
+          set +e
+          npx -y firebase-tools@latest deploy --only hosting --project neat-motif-237214 --non-interactive > "$RUNNER_TEMP/salida.txt" 2>&1
+          r=$?
+          rm -f "$RUNNER_TEMP/llave.json"
+          if [ $r -ne 0 ]; then tail -n 12 "$RUNNER_TEMP/salida.txt" | grep -v '^\s*$' | while IFS= read -r l; do echo "::error::$l"; done; exit $r; fi
+          tail -n 5 "$RUNNER_TEMP/salida.txt"
