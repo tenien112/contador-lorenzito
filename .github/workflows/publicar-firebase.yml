@@ -10,7 +10,7 @@ on:
 
 jobs:
   publicar:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     defaults:
       run:
         working-directory: codigo-fuente
@@ -34,6 +34,10 @@ jobs:
         run: |
           flutter pub get
           flutter build web --release --build-number=$((42 + ${{ github.run_number }}))
+      - uses: actions/setup-node@v4
+        if: steps.llave.outputs.ok == 'si'
+        with:
+          node-version: 20
       - uses: FirebaseExtended/action-hosting-deploy@v0
         if: steps.llave.outputs.ok == 'si'
         with:
