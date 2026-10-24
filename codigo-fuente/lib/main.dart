@@ -177,6 +177,7 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
   BannerAd? _bannerAd;
   final FirebaseService _firebaseService = FirebaseService();
   User? _user;
+  String _versionWeb = '';
   bool _isSyncing = false;
   bool _isVip = false;
   StreamSubscription<bool>? _vipSubscription;
@@ -206,6 +207,29 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
     _startTimer();
     _loadBannerAd();
     _initFirebase();
+    if (kIsWeb) _avisarSiActualizada();
+  }
+
+  /// Muestra «CONTADOR SERIES LORENZITO se ha actualizado» cuando cambia la versión.
+  Future<void> _avisarSiActualizada() async {
+    try {
+      final r = await http.get(Uri.base.resolve(
+          'version.json?t=${DateTime.now().millisecondsSinceEpoch}'));
+      if (r.statusCode != 200) return;
+      final build = (jsonDecode(r.body)['build_number'] ?? '').toString();
+      final prefs = await SharedPreferences.getInstance();
+      final anterior = prefs.getString('ultima_version_vista');
+      await prefs.setString('ultima_version_vista', build);
+      if (!mounted) return;
+      if (anterior != null && anterior != build) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('CONTADOR SERIES LORENZITO se ha actualizado (versión $build)'),
+          backgroundColor: Colors.green,
+          duration: const Duration(seconds: 5),
+        ));
+      }
+      setState(() => _versionWeb = build);
+    } catch (_) {}
   }
 
   Future<void> _initFirebase() async {
@@ -1311,7 +1335,9 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Historial de Entrenamientos'),
+        title: Text(_versionWeb.isEmpty
+            ? 'Historial de Entrenamientos'
+            : 'Historial de Entrenamientos (v$_versionWeb)'),
         content: SizedBox(
           width: double.maxFinite,
           child: _savedSessions.isEmpty
@@ -1843,12 +1869,15 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
         return true;
       }
       messenger.showSnackBar(SnackBar(
+          duration: const Duration(seconds: 10),
           content: Text(
-              'No se pudo guardar directamente (${resp.statusCode}). Se abre Google Calendar.')));
+              'No se pudo guardar en verde (error ${resp.statusCode}). Se abre Google Calendar.')));
       return false;
     } catch (e) {
-      messenger.showSnackBar(const SnackBar(
-          content: Text('No se pudo conectar con Google. Se abre Google Calendar.')));
+      final codigo = e is FirebaseAuthException ? e.code : e.toString();
+      messenger.showSnackBar(SnackBar(
+          duration: const Duration(seconds: 10),
+          content: Text('No se pudo conectar con Google ($codigo). Se abre Google Calendar.')));
       return false;
     }
   }
