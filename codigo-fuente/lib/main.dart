@@ -1765,14 +1765,23 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
       details += '\n';
     }
 
+    final titulo =
+        'GIMNASIO - $_selectedExerciseType - $_seriesCounter SERIES ($totalReps REPS)';
+
+    // En la web: se guarda directamente en Google Calendar en VERDE (colorId 10).
+    // Si algo falla, se abre Google Calendar con el evento rellenado como antes.
+    if (kIsWeb) {
+      final ok = await _guardarEnCalendarioVerde(titulo, details, start, end);
+      if (ok) return;
+    }
+
     final url = Uri(
       scheme: 'https',
       host: 'calendar.google.com',
       path: '/calendar/render',
       queryParameters: {
         'action': 'TEMPLATE',
-        'text':
-            'GIMNASIO - $_selectedExerciseType - $_seriesCounter SERIES ($totalReps REPS)',
+        'text': titulo,
         'dates': '$startFormatted/$endFormatted',
         'details': details,
         'sf': 'true',
@@ -1782,6 +1791,65 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
 
     if (await canLaunchUrl(url)) {
       await launchUrl(url, mode: LaunchMode.externalApplication);
+    }
+  }
+
+  /// Crea el evento directamente en el calendario principal de Google con
+  /// color verde (colorId "10" = Albahaca). Devuelve true si se ha guardado.
+  Future<bool> _guardarEnCalendarioVerde(
+      String titulo, String detalles, DateTime inicio, DateTime fin) async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final GoogleAuthProvider googleProvider = GoogleAuthProvider();
+      googleProvider
+          .addScope('https://www.googleapis.com/auth/calendar.events');
+
+      final UserCredential credential =
+          await FirebaseAuth.instance.signInWithPopup(googleProvider);
+      final accessToken =
+          (credential.credential as OAuthCredential?)?.accessToken;
+
+      // Volver a la sesión anónima de la app, como en la importación
+      await FirebaseAuth.instance.signOut();
+      await _firebaseService.signInAnonymously().then((uc) {
+        if (uc != null && mounted) setState(() => _user = uc.user);
+      });
+
+      if (accessToken == null) return false;
+
+      Map<String, dynamic> hora(DateTime d) =>
+          {'dateTime': d.toUtc().toIso8601String()};
+
+      final resp = await http.post(
+        Uri.https('www.googleapis.com', '/calendar/v3/calendars/primary/events'),
+        headers: {
+          'Authorization': 'Bearer $accessToken',
+          'Content-Type': 'application/json; charset=utf-8',
+        },
+        body: jsonEncode({
+          'summary': titulo,
+          'description': detalles,
+          'start': hora(inicio),
+          'end': hora(fin),
+          'colorId': '10', // verde
+        }),
+      );
+
+      if (resp.statusCode == 200 || resp.statusCode == 201) {
+        messenger.showSnackBar(const SnackBar(
+          content: Text('✅ Entrenamiento guardado en tu calendario (en verde)'),
+          backgroundColor: Colors.green,
+        ));
+        return true;
+      }
+      messenger.showSnackBar(SnackBar(
+          content: Text(
+              'No se pudo guardar directamente (${resp.statusCode}). Se abre Google Calendar.')));
+      return false;
+    } catch (e) {
+      messenger.showSnackBar(const SnackBar(
+          content: Text('No se pudo conectar con Google. Se abre Google Calendar.')));
+      return false;
     }
   }
 
