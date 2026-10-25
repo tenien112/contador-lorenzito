@@ -1900,13 +1900,8 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
           ],
         ],
       ),
-      body: SingleChildScrollView(
-        child: Center(
-          child: Padding(
-            padding: const EdgeInsets.only(top: 15.0, bottom: 2.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: <Widget>[
+      body: _cuerpo(
+        <Widget>[
                 Text(
                   DateFormat('EEEE, d MMMM yyyy', 'es_ES').format(_currentTime),
                   style: const TextStyle(
@@ -2180,7 +2175,8 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                const SizedBox(height: 15),
+        ],
+        <Widget>[
                 // Nueva sección de repeticiones
                 Container(
                   padding:
@@ -2309,10 +2305,7 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
                     ),
                   ),
                 ),
-              ],
-            ),
-          ),
-        ),
+        ],
       ),
       bottomNavigationBar: _bannerAd != null
           ? SafeArea(
@@ -2323,6 +2316,64 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
               ),
             )
           : null,
+    );
+  }
+
+  // En el ordenador (ventana ancha) reparte la pantalla en dos columnas
+  // para que se vean todos los botones sin tener que bajar.
+  Widget _cuerpo(List<Widget> arriba, List<Widget> abajo) {
+    return LayoutBuilder(
+      builder: (context, c) {
+        final ancho = c.maxWidth >= 700 && c.maxWidth > c.maxHeight;
+        if (!ancho) {
+          return SingleChildScrollView(
+            child: Center(
+              child: Padding(
+                padding: const EdgeInsets.only(top: 15.0, bottom: 2.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: <Widget>[
+                    ...arriba,
+                    const SizedBox(height: 15),
+                    ...abajo,
+                  ],
+                ),
+              ),
+            ),
+          );
+        }
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Expanded(
+              child: Center(
+                child: SingleChildScrollView(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: arriba,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            Expanded(
+              child: Center(
+                child: SingleChildScrollView(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: abajo,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 
